@@ -70,4 +70,27 @@ describe("StreamAsyncIterator", () => {
       error.message.should.match(/broken/);
     }
   });
+
+  it("buffer splicing demo", async () => {
+    let data = [ "hello", " sail", "or" ];
+    const fake = new stream.Readable({
+      read(size) {
+        if (data.length == 0) {
+          fake.push(null);
+          return;
+        }
+        setTimeout(() => fake.push(Buffer.from(data.shift() || "")), 10);
+      }
+    });
+
+    async function* threes(buffer: Buffer) {
+      while (buffer.length > 0) {
+        yield buffer.slice(0, 3);
+        buffer = buffer.slice(3);
+      }
+    }
+
+    const iter = StreamAsyncIterator.from(fake).flatMap(threes);
+    (await iter.map(b => b.toString()).collect()).should.eql([ "hel", "lo", " sa", "il", "or" ]);
+  });
 });
