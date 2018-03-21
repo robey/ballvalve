@@ -1,0 +1,36 @@
+{
+  "name": "ballvalve",
+  "version": "1.0.0",
+  "description": "adapt streaming data into async iterators",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "engines": {
+    "node": ">=8.5.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf lib",
+    "distclean": "npm run clean && rm -rf node_modules npm-debug.log",
+    "prepare": "tsc",
+    "test": "npm run build && mocha -R spec --colors lib/test --slow 200"
+  },
+  "keywords": [
+    "asynciterator",
+    "asynciterable",
+    "stream"
+  ],
+  "author": "Robey Pointer <robeypointer@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:robey/ballvalve.git"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/mocha": "^2.2.48",
+    "@types/node": "^9.4.7",
+    "mocha": "^5.0.4",
+    "should": "^13.2.1",
+    "source-map-support": "^0.5.4",
+    "typescript": "^2.7.2"
+  }
+}
