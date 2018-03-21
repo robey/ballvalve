@@ -36,6 +36,7 @@ $ npm test
 
     - `map<B>(f: (item: A) => (B | Promise<B>)): ExtendedAsyncIterable<B>`
     - `flatMap<B>(f: (item: A) => AsyncIterable<B>): ExtendedAsyncIterable<B>`
+    - `filter(f: (item: A) => boolean): ExtendedAsyncIterable<A>`
     - `collect(): Promise<A[]>`
     - `take(n: number): Promise<A[]>`
 

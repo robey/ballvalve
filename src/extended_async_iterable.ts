@@ -28,6 +28,14 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
     return new ExtendedAsyncIterable(iterable());
   }
 
+  filter(f: (item: A) => boolean): ExtendedAsyncIterable<A> {
+    const wrapped = this.wrapped;
+    async function* iterable() {
+      for await (const item of wrapped) if (f(item)) yield item;
+    }
+    return new ExtendedAsyncIterable(iterable());
+  }
+
   async collect(): Promise<A[]> {
     const rv: A[] = [];
     for await (const x of this.wrapped) rv.push(x);
