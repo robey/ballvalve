@@ -3,8 +3,6 @@ import { PushAsyncIterator, wrap } from "../";
 import "should";
 import "source-map-support/register";
 
-const delay = (msec: number) => new Promise<void>(resolve => setTimeout(resolve, msec));
-
 describe("PushAsyncIterator", () => {
   it("writes data and closes", async () => {
     const iter = new PushAsyncIterator<number>();

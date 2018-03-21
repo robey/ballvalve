@@ -4,8 +4,9 @@
 import { AsyncIterableIterator } from "./async_iterable_iterator";
 import { ExtendedAsyncIterable } from "./extended_async_iterable";
 import { PushAsyncIterator } from "./push_async_iterator";
+import { StreamAsyncIterator } from "./stream_async_iterator";
 
-export { AsyncIterableIterator, ExtendedAsyncIterable, PushAsyncIterator };
+export { AsyncIterableIterator, ExtendedAsyncIterable, PushAsyncIterator, StreamAsyncIterator };
 
 export function wrap<A>(iter: AsyncIterable<A>): ExtendedAsyncIterable<A> {
   return new ExtendedAsyncIterable(iter);
