@@ -27,7 +27,7 @@ export class PushAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> 
   private eof = false;
   private pendingError?: Error;
 
-  // items pushed by `pushReady`, queued up for listeners
+  // items pushed by `push`, queued up for listeners
   private pushed: A[] = [];
 
   // the spec says we have to allow a bunch of sequential `next()` calls

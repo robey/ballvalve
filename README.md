@@ -36,6 +36,7 @@ $ npm test
     - `filterMap<B>(f: (item: A) => B | undefined): ExtendedAsyncIterable<B>`
     - `collect(): Promise<A[]>`
     - `chain(iter: AsyncIterable<A>): ExtendedAsyncIterable<A>`
+    - `tee(count: number = 2): ExtendedAsyncIterable<A>[]`
     - `takeWhile(f: (item: A) => boolean): ExtendedAsyncIterable<A>`
     - `take(n: number): Promise<A[]>`
     - `takeFor(msec: number): ExtendedAsyncIterable<A>`

@@ -11,7 +11,14 @@ async function* ten() {
 
 async function* slowTen() {
   for (let i = 0; i < 10; i++) {
-    await delay(4);
+    await delay(2);
+    yield i;
+  }
+}
+
+async function* slowerTen() {
+  for (let i = 0; i < 10; i++) {
+    await delay(10);
     yield i;
   }
 }
@@ -80,6 +87,20 @@ describe("ExtendedAsyncIterable", () => {
     ]);
   });
 
+  it("tee", async () => {
+    const [ a, b ] = asyncIter(ten()).tee();
+    (await a.collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+    (await b.collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+
+    const [ c, d ] = asyncIter(slowTen()).tee();
+    (await d.collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+    (await c.collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+
+    const [ e, f ] = asyncIter(slowTen()).tee();
+    (await e.take(3).collect()).should.eql([ 0, 1, 2 ]);
+    (await f.collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+  });
+
   it("takeWhile", async () => {
     (await asyncIter(ten()).takeWhile(n => n <= 5).collect()).should.eql([ 0, 1, 2, 3, 4, 5 ]);
     (await asyncIter(slowTen()).takeWhile(n => n <= 5).collect()).should.eql([ 0, 1, 2, 3, 4, 5 ]);
@@ -91,6 +112,6 @@ describe("ExtendedAsyncIterable", () => {
   });
 
   it("takeFor", async () => {
-    (await asyncIter(slowTen()).takeFor(20).collect()).should.eql([ 0, 1, 2, 3 ]);
+    (await asyncIter(slowerTen()).takeFor(45).collect()).should.eql([ 0, 1, 2, 3 ]);
   })
 });

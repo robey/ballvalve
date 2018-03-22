@@ -42,8 +42,8 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
   }
 
   // reduce
-  // some
-  // every
+  // any
+  // all
 
   async collect(): Promise<A[]> {
     const rv: A[] = [];
@@ -53,7 +53,7 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
 
   chain(iter: AsyncIterable<A>): ExtendedAsyncIterable<A> {
     const wrapped = this.wrapped;
-    return asyncIter(async function* iterable() {
+    return asyncIter(async function* () {
       for await (const item of wrapped) yield item;
       for await (const item of iter) yield item;
     }());
@@ -63,9 +63,32 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
   // enumerate
   // partition
 
+  tee(count: number = 2): ExtendedAsyncIterable<A>[] {
+    const iter = this.wrapped[Symbol.asyncIterator]();
+    const queued: IteratorResult<A>[][] = new Array(count);
+
+    return [...Array(count).keys()].map(i => {
+      queued[i] = [];
+      return asyncIter(async function* () {
+        while (true) {
+          let result = queued[i].shift();
+          if (result === undefined) {
+            let r = await iter.next();
+            [...Array(count).keys()].forEach(n => {
+              if (n != i) queued[n].push(r);
+            });
+            result = r;
+          }
+          if (result.done) return;
+          yield result.value;
+        }
+      }());
+    });
+  }
+
   takeWhile(f: (item: A) => boolean): ExtendedAsyncIterable<A> {
     const wrapped = this.wrapped;
-    return asyncIter(async function* iterable() {
+    return asyncIter(async function* () {
       for await (const item of wrapped) {
         if (!f(item)) return;
         yield item;
@@ -75,7 +98,7 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
 
   take(n: number): ExtendedAsyncIterable<A> {
     const wrapped = this.wrapped;
-    return asyncIter(async function* iterable() {
+    return asyncIter(async function* () {
       let remaining = n;
       for await (const item of wrapped) {
         yield item;
@@ -91,7 +114,7 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
 
   takeUntil(deadline: number): ExtendedAsyncIterable<A> {
     const iter = this.wrapped[Symbol.asyncIterator]();
-    return asyncIter(async function* iterable() {
+    return asyncIter(async function* () {
       while (true) {
         const now = Date.now();
         if (now >= deadline) return;
