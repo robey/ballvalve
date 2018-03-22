@@ -177,4 +177,32 @@ describe("ExtendedAsyncIterable", () => {
     (await asyncIter(ten()).drop(4).collect()).should.eql([ 4, 5, 6, 7, 8, 9 ]);
     (await asyncIter(slowTen()).drop(4).collect()).should.eql([ 4, 5, 6, 7, 8, 9 ]);
   });
+
+  it("demo", async () => {
+    async function* data() {
+      yield Buffer.from("hell");
+      yield Buffer.from("o\nsa")
+      yield Buffer.from("ilor\neof\n");
+    }
+    const iter = asyncIter(data());
+
+    const intoLines = () => {
+      let saved: Buffer = Buffer.alloc(0);
+
+      return async function* (data: Buffer) {
+        let start = 0;
+        for (let i = 0; i < data.length; i++) {
+          if (data[i] == 10) {
+            if (i > start) saved = Buffer.concat([ saved, data.slice(start, i) ]);
+            yield saved.toString();
+            saved = Buffer.alloc(0);
+            start = i + 1;
+          }
+        }
+        if (start < data.length) saved = Buffer.concat([ saved, data.slice(start) ]);
+      };
+    }
+
+    (await iter.flatMap(intoLines()).collect()).should.eql([ "hello", "sailor", "eof" ]);
+  });
 });
