@@ -70,6 +70,13 @@ describe("ExtendedAsyncIterable", () => {
     rv.should.eql([ 0, 4, 8, 12, 16 ]);
   })
 
+  it("find", async () => {
+    ((await asyncIter(ten()).find(n => n == 4)) || 0).should.eql(4);
+    ((await asyncIter(slowTen()).find(n => n == 4)) || 0).should.eql(4);
+    ((await asyncIter(ten()).find(n => n > 14)) || 0).should.eql(0);
+    ((await asyncIter(slowTen()).find(n => n > 14)) || 0).should.eql(0);
+  });
+
   it("collect", async () => {
     (await asyncIter(ten()).collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
     (await asyncIter(slowTen()).collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
@@ -85,6 +92,52 @@ describe("ExtendedAsyncIterable", () => {
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9
     ]);
+  });
+
+  it("zip", async () => {
+    (await asyncIter(ten()).take(4).zip(asyncIter(ten()).drop(1).take(5)).collect()).should.eql(
+      [ [ 0, 1 ], [ 1, 2 ], [ 2, 3 ], [ 3, 4 ] ]
+    );
+
+    (await asyncIter(slowTen()).take(5).zip(asyncIter(slowTen()).drop(1).take(4)).collect()).should.eql(
+      [ [ 0, 1 ], [ 1, 2 ], [ 2, 3 ], [ 3, 4 ] ]
+    );
+  });
+
+  it("enumerate", async () => {
+    (await asyncIter(ten()).map(n => n + 5).enumerate().collect()).should.eql(
+      [ [ 0, 5 ], [ 1, 6 ], [ 2, 7 ], [ 3, 8 ], [ 4, 9 ], [ 5, 10 ], [ 6, 11 ], [ 7, 12 ], [ 8, 13 ], [ 9, 14 ] ]
+    );
+
+    (await asyncIter(slowTen()).map(n => n + 5).enumerate().collect()).should.eql(
+      [ [ 0, 5 ], [ 1, 6 ], [ 2, 7 ], [ 3, 8 ], [ 4, 9 ], [ 5, 10 ], [ 6, 11 ], [ 7, 12 ], [ 8, 13 ], [ 9, 14 ] ]
+    );
+  });
+
+  it("splitWhen", async () => {
+    const [ iter1, iter2 ] = asyncIter(ten()).splitWhen(n => n >= 6);
+    (await iter1.collect()).should.eql([ 0, 1, 2, 3, 4, 5 ]);
+    (await iter2.collect()).should.eql([ 6, 7, 8, 9 ]);
+
+    const [ iter3, iter4 ] = asyncIter(ten()).splitWhen(n => n >= 12);
+    (await iter3.collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+    (await iter4.collect()).should.eql([]);
+
+    const [ iter5, iter6 ] = asyncIter(ten()).splitWhen(n => n < 100);
+    (await iter5.collect()).should.eql([]);
+    (await iter6.collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+
+    const [ iter7, iter8 ] = asyncIter(slowTen()).splitWhen(n => n >= 6);
+    (await iter7.collect()).should.eql([ 0, 1, 2, 3, 4, 5 ]);
+    (await iter8.collect()).should.eql([ 6, 7, 8, 9 ]);
+
+    const [ iter9, iterA ] = asyncIter(slowTen()).splitWhen(n => n >= 12);
+    (await iter9.collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+    (await iterA.collect()).should.eql([]);
+
+    const [ iterB, iterC ] = asyncIter(slowTen()).splitWhen(n => n < 100);
+    (await iterB.collect()).should.eql([]);
+    (await iterC.collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
   });
 
   it("tee", async () => {
@@ -112,6 +165,16 @@ describe("ExtendedAsyncIterable", () => {
   });
 
   it("takeFor", async () => {
-    (await asyncIter(slowerTen()).takeFor(45).collect()).should.eql([ 0, 1, 2, 3 ]);
+    (await asyncIter(slowerTen()).takeFor(48).collect()).should.eql([ 0, 1, 2, 3 ]);
   })
+
+  it("dropWhile", async () => {
+    (await asyncIter(ten()).dropWhile(n => n <= 5).collect()).should.eql([ 6, 7, 8, 9 ]);
+    (await asyncIter(slowTen()).dropWhile(n => n <= 5).collect()).should.eql([ 6, 7, 8, 9 ]);
+  });
+
+  it("drop", async () => {
+    (await asyncIter(ten()).drop(4).collect()).should.eql([ 4, 5, 6, 7, 8, 9 ]);
+    (await asyncIter(slowTen()).drop(4).collect()).should.eql([ 4, 5, 6, 7, 8, 9 ]);
+  });
 });

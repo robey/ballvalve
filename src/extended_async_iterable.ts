@@ -1,5 +1,9 @@
 /*
  * wrapper for AsyncIterable that has basic functional operations on it.
+ *
+ * some operations, like `reduce` or `all`, are not implemented, because they
+ * require the iterable's entire contents. for those, use `collect()` and the
+ * equivalent array method.
  */
 export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
   constructor(public wrapped: AsyncIterable<A>) {
@@ -41,9 +45,10 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
     }());
   }
 
-  // reduce
-  // any
-  // all
+  async find(f: (item: A) => boolean): Promise<A | undefined> {
+    for await (const item of this.wrapped) { if (f(item)) return item; }
+    return undefined;
+  }
 
   async collect(): Promise<A[]> {
     const rv: A[] = [];
@@ -59,9 +64,67 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
     }());
   }
 
-  // zip
-  // enumerate
-  // partition
+  zip<B>(iter: AsyncIterable<B>): ExtendedAsyncIterable<[ A, B ]> {
+    const iter1 = this.wrapped[Symbol.asyncIterator]();
+    const iter2 = iter[Symbol.asyncIterator]();
+    return asyncIter(async function* () {
+      while (true) {
+        const r1 = await iter1.next();
+        const r2 = await iter2.next();
+        if (r1.done || r2.done) return;
+        yield [ r1.value, r2.value ] as [ A, B ];
+      }
+    }());
+  }
+
+  enumerate(): ExtendedAsyncIterable<[ number, A ]> {
+    const wrapped = this.wrapped;
+    return asyncIter(async function* () {
+      let i = 0;
+      for await (const item of wrapped) {
+        yield [ i, item ] as [ number, A ];
+        i++;
+      }
+    }());
+  }
+
+  // return 2 iterators:
+  //   - the first contains items as long as f(item) is false
+  //   - the second contains the first item where f(item) is true, and all
+  //     remaining items after that
+  splitWhen(f: (item: A) => boolean): [ ExtendedAsyncIterable<A>, ExtendedAsyncIterable<A> ] {
+    const iter = this.wrapped[Symbol.asyncIterator]();
+    let unblock: (item: A | undefined) => void;
+    const blocked = new Promise<A | undefined>(resolve => {
+      unblock = resolve;
+    });
+
+    async function* iter1() {
+      while (true) {
+        const r = await iter.next();
+        if (r.done) break;
+        if (f(r.value)) {
+          unblock(r.value);
+          return;
+        }
+        yield r.value;
+      }
+      unblock(undefined);
+    }
+
+    async function* iter2() {
+      const item = await blocked;
+      if (item === undefined) return;
+      yield item;
+      while (true) {
+        const r = await iter.next();
+        if (r.done) return;
+        yield r.value;
+      }
+    }
+
+    return [ asyncIter(iter1()), asyncIter(iter2()) ];
+  }
 
   tee(count: number = 2): ExtendedAsyncIterable<A>[] {
     const iter = this.wrapped[Symbol.asyncIterator]();
@@ -128,10 +191,31 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
     }());
   }
 
-  // dropWhile
-  // drop
-  // dropFor
-  // dropUntil
+  dropWhile(f: (item: A) => boolean): ExtendedAsyncIterable<A> {
+    const wrapped = this.wrapped;
+    return asyncIter(async function* () {
+      let dropping = true;
+      for await (const item of wrapped) {
+        if (dropping && f(item)) continue;
+        dropping = false;
+        yield item;
+      }
+    }());
+  }
+
+  drop(n: number): ExtendedAsyncIterable<A> {
+    const wrapped = this.wrapped;
+    return asyncIter(async function* () {
+      let remaining = n;
+      for await (const item of wrapped) {
+        if (remaining > 0) {
+          remaining--;
+        } else {
+          yield item;
+        }
+      }
+    }());
+  }
 }
 
 // small wrapper to allow an iterator to be iterable.

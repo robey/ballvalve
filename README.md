@@ -34,13 +34,19 @@ $ npm test
     - `flatMap<B>(f: (item: A) => AsyncIterable<B>): ExtendedAsyncIterable<B>`
     - `filter(f: (item: A) => boolean): ExtendedAsyncIterable<A>`
     - `filterMap<B>(f: (item: A) => B | undefined): ExtendedAsyncIterable<B>`
+    - `find(f: (item: A) => boolean): Promise<A | undefined>`
     - `collect(): Promise<A[]>`
     - `chain(iter: AsyncIterable<A>): ExtendedAsyncIterable<A>`
+    - `zip<B>(iter: AsyncIterable<B>): ExtendedAsyncIterable<[ A, B ]>`
+    - `enumerate(): ExtendedAsyncIterable<[ number, A ]>`
+    - `splitWhen(f: (item: A) => boolean): [ ExtendedAsyncIterable<A>, ExtendedAsyncIterable<A> ]`
     - `tee(count: number = 2): ExtendedAsyncIterable<A>[]`
     - `takeWhile(f: (item: A) => boolean): ExtendedAsyncIterable<A>`
     - `take(n: number): Promise<A[]>`
     - `takeFor(msec: number): ExtendedAsyncIterable<A>`
     - `takeUntil(deadline: number): ExtendedAsyncIterable<A>`
+    - `dropWhile(f: (item: A) => boolean): ExtendedAsyncIterable<A>`
+    - `drop(n: number): ExtendedAsyncIterable<A>`
 
 - `PushAsyncIterator<A>(pullNext?: () => (A | undefined))`
 
