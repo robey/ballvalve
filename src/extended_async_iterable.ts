@@ -1,5 +1,3 @@
-import { AsyncIterableIterator } from "./async_iterable_iterator";
-
 /*
  * wrapper for AsyncIterable that has basic functional operations on it.
  */
@@ -115,6 +113,19 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
   // dropUntil
 }
 
-export function asyncIter<A>(iter: AsyncIterable<A>): ExtendedAsyncIterable<A> {
-  return (iter instanceof ExtendedAsyncIterable) ? iter : new ExtendedAsyncIterable(iter);
+// small wrapper to allow an iterator to be iterable.
+class AsyncIterableIterator<A> implements AsyncIterable<A> {
+  constructor(public __iter: AsyncIterator<A>) {}
+  [Symbol.asyncIterator](): AsyncIterator<A> { return this.__iter; }
+}
+
+/*
+ * Turn an `AsyncIterable` or `AsyncIterator` into an `ExtendedAsyncIterable`
+ * that has functional methods on it. Will try to add as few wrappers as
+ * possible, and will pass existing `ExtendedAsyncIterable`s through unharmed.
+ */
+export function asyncIter<A>(iter: AsyncIterable<A> | AsyncIterator<A>): ExtendedAsyncIterable<A> {
+  if (iter instanceof ExtendedAsyncIterable) return iter;
+  if ((iter as any)[Symbol.asyncIterator]) return new ExtendedAsyncIterable(iter as any as AsyncIterable<A>);
+  return new ExtendedAsyncIterable(new AsyncIterableIterator(iter as any as AsyncIterator<A>));
 }
