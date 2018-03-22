@@ -30,15 +30,20 @@ $ npm test
 
   Ensure that an `AsyncIterator` can be used in places that want an `AsyncIterable` (like `for await`). This is sometimes necessary for one-shot iterators, like streams.
 
-- `wrap<A>(iter: AsyncIterable<A>): ExtendedAsyncIterable<A>)`
+- `asyncIter<A>(iter: AsyncIterable<A> | AsyncIterator<A>): ExtendedAsyncIterable<A>)`
 
-  Wrap an `AsyncIterable` in an object with functional methods:
+  Ensure that an object is iterable, by wrapping it in an object with a `[Symbol.asyncIterator]` method if necessary, and then wrap it in a fancy object with functional methods:
 
     - `map<B>(f: (item: A) => (B | Promise<B>)): ExtendedAsyncIterable<B>`
     - `flatMap<B>(f: (item: A) => AsyncIterable<B>): ExtendedAsyncIterable<B>`
     - `filter(f: (item: A) => boolean): ExtendedAsyncIterable<A>`
+    - `filterMap<B>(f: (item: A) => B | undefined): ExtendedAsyncIterable<B>`
     - `collect(): Promise<A[]>`
+    - `chain(iter: AsyncIterable<A>): ExtendedAsyncIterable<A>`
+    - `takeWhile(f: (item: A) => boolean): ExtendedAsyncIterable<A>`
     - `take(n: number): Promise<A[]>`
+    - `takeFor(msec: number): ExtendedAsyncIterable<A>`
+    - `takeUntil(deadline: number): ExtendedAsyncIterable<A>`
 
 - `PushAsyncIterator<A>(pullNext?: () => (A | undefined))`
 
