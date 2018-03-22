@@ -1,5 +1,5 @@
 import * as stream from "stream";
-import { ExtendedAsyncIterable } from "./extended_async_iterable";
+import { asyncIter, ExtendedAsyncIterable } from "./extended_async_iterable";
 import { PushAsyncIterator } from "./push_async_iterator";
 
 /*
@@ -26,6 +26,6 @@ export class StreamAsyncIterator extends PushAsyncIterator<Buffer> {
   }
 
   static from(stream: stream.Readable, size?: number): ExtendedAsyncIterable<Buffer> {
-    return new ExtendedAsyncIterable(new StreamAsyncIterator(stream, size));
+    return asyncIter(new StreamAsyncIterator(stream, size));
   }
 }
