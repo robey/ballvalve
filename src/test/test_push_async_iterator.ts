@@ -1,4 +1,4 @@
-import { PushAsyncIterator, wrap } from "../";
+import { asyncIter, PushAsyncIterator } from "../";
 
 import "should";
 import "source-map-support/register";
@@ -10,7 +10,7 @@ describe("PushAsyncIterator", () => {
     iter.push(5);
     iter.end();
 
-    (await wrap(iter).collect()).should.eql([ 4, 5 ]);
+    (await asyncIter(iter).collect()).should.eql([ 4, 5 ]);
   });
 
   it("wakes up as data arrives", async () => {
@@ -21,7 +21,7 @@ describe("PushAsyncIterator", () => {
       iter.end();
     }, 10);
 
-    (await wrap(iter).collect()).should.eql([ 4, 5 ]);
+    (await asyncIter(iter).collect()).should.eql([ 4, 5 ]);
   });
 
   it("wakes up on a trickle", async () => {
@@ -36,7 +36,7 @@ describe("PushAsyncIterator", () => {
       iter.end();
     }, 30);
 
-    (await wrap(iter).collect()).should.eql([ 4, 5 ]);
+    (await asyncIter(iter).collect()).should.eql([ 4, 5 ]);
   });
 
   it("operates in pull mode", async () => {
@@ -65,7 +65,7 @@ describe("PushAsyncIterator", () => {
       iter.end();
     }, 40);
 
-    (await wrap(iter).collect()).should.eql([ 4, 5 ]);
+    (await asyncIter(iter).collect()).should.eql([ 4, 5 ]);
   });
 
   it("catches errors", async () => {
@@ -76,7 +76,7 @@ describe("PushAsyncIterator", () => {
 
     let thrown = false;
     try {
-      await wrap(iter).collect();
+      await asyncIter(iter).collect();
     } catch (error) {
       thrown = true;
     }
