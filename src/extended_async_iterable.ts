@@ -74,10 +74,8 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
           let result = queued[i].shift();
           if (result === undefined) {
             let r = await iter.next();
-            [...Array(count).keys()].forEach(n => {
-              if (n != i) queued[n].push(r);
-            });
-            result = r;
+            queued.forEach(q => q.push(r));
+            continue;
           }
           if (result.done) return;
           yield result.value;
