@@ -26,10 +26,6 @@ $ npm test
 
 ## API
 
-- `AsyncIterableIterator<A>.from(iter: AsyncIterator<A>): AsyncIterable<A>`
-
-  Ensure that an `AsyncIterator` can be used in places that want an `AsyncIterable` (like `for await`). This is sometimes necessary for one-shot iterators, like streams.
-
 - `asyncIter<A>(iter: AsyncIterable<A> | AsyncIterator<A>): ExtendedAsyncIterable<A>)`
 
   Ensure that an object is iterable, by wrapping it in an object with a `[Symbol.asyncIterator]` method if necessary, and then wrap it in a fancy object with functional methods:
