@@ -224,13 +224,22 @@ class AsyncIterableIterator<A> implements AsyncIterable<A> {
   [Symbol.asyncIterator](): AsyncIterator<A> { return this.__iter; }
 }
 
+export type VaguelyIterable<A> = AsyncIterable<A> | AsyncIterator<A> | Iterable<A>;
+
 /*
  * Turn an `AsyncIterable` or `AsyncIterator` into an `ExtendedAsyncIterable`
  * that has functional methods on it. Will try to add as few wrappers as
  * possible, and will pass existing `ExtendedAsyncIterable`s through unharmed.
  */
-export function asyncIter<A>(iter: AsyncIterable<A> | AsyncIterator<A>): ExtendedAsyncIterable<A> {
+export function asyncIter<A>(iter: VaguelyIterable<A>): ExtendedAsyncIterable<A> {
   if (iter instanceof ExtendedAsyncIterable) return iter;
-  if ((iter as any)[Symbol.asyncIterator]) return new ExtendedAsyncIterable(iter as any as AsyncIterable<A>);
-  return new ExtendedAsyncIterable(new AsyncIterableIterator(iter as any as AsyncIterator<A>));
+  // AsyncIterable?
+  if ((iter as any)[Symbol.asyncIterator]) return new ExtendedAsyncIterable(iter as AsyncIterable<A>);
+  // Iterable?
+  if ((iter as any)[Symbol.iterator]) {
+    return asyncIter(async function* () {
+      for (const item of (iter as Iterable<A>)) yield item;
+    }());
+  }
+  return new ExtendedAsyncIterable(new AsyncIterableIterator(iter as AsyncIterator<A>));
 }

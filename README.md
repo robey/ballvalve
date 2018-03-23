@@ -17,6 +17,32 @@ async function* threes(buffer: Buffer) {
 const iter = StreamAsyncIterator.from(myStream).flatMap(threes);
 ```
 
+As another (not optimized) example, a `flatMap` operation can transform a stream of arbitratry-sized nodejs `Buffer` objects into lines of text, split at linefeeds:
+
+```javascript
+const iter = asyncIter([ "hell", "o\nsa", "ilor\neof\n" ].map(s => Buffer.from(s)));
+
+const intoLines = () => {
+  let saved: Buffer = Buffer.alloc(0);
+
+  return async function* (data: Buffer) {
+    let start = 0;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i] == "\n".charCodeAt(0)) {
+        if (i > start) saved = Buffer.concat([ saved, data.slice(start, i) ]);
+        yield saved.toString();
+        saved = Buffer.alloc(0);
+        start = i + 1;
+      }
+    }
+    if (start < data.length) saved = Buffer.concat([ saved, data.slice(start) ]);
+  };
+}
+
+await iter.flatMap(intoLines()).collect()
+// => [ "hello", "sailor", "eof" ]
+```
+
 ## Building
 
 ```
