@@ -73,11 +73,11 @@ export class PushAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> 
     while (this.resolve.length > 0) {
       // in order: throw any pending error, hand out any queued data, signal
       // completion if `end()` was called, or try to pull a new item.
-      if (this.pendingError) {
-        this.callReject(this.pendingError);
-      } else if (this.pushed.length > 0) {
+      if (this.pushed.length > 0) {
         const value = this.pushed.shift();
         if (value) this.callResolve({ done: false, value });
+      } else if (this.pendingError) {
+        this.callReject(this.pendingError);
       } else if (this.eof) {
         // the iterator protocol says we don't need to define `value` when
         // `done` is true, but typescript doesn't know that yet.
