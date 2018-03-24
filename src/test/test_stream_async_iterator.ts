@@ -71,6 +71,16 @@ describe("StreamAsyncIterator", () => {
     }
   });
 
+  it("handles pre-pushed data", async () => {
+    const s = new stream.PassThrough();
+    s.write(Buffer.from("hello!"));
+
+    const iter = StreamAsyncIterator.from(s)[Symbol.asyncIterator]();
+    const result = await iter.next();
+    result.done.should.eql(false);
+    result.value.toString().should.eql("hello!");
+  });
+
   it("buffer splicing demo", async () => {
     let data = [ "hello", " sail", "or" ];
     const fake = new stream.Readable({
