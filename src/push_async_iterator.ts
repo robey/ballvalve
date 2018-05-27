@@ -65,7 +65,7 @@ export class PushAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> 
     return new Promise((resolve, reject) => {
       this.resolve.push(resolve);
       this.reject.push(reject);
-      if (this.ready || this.eof || this.pendingError) this.wakeup();
+      this.wakeup();
     });
   }
 
