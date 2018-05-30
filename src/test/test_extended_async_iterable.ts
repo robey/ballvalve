@@ -200,4 +200,23 @@ describe("ExtendedAsyncIterable", () => {
 
     (await iter.flatMap(intoLines()).collect()).should.eql([ "hello", "sailor", "eof" ]);
   });
+
+  it("alerting", async () => {
+    const iter = asyncIter(ten()).alerting();
+    let count = 0;
+    await Promise.all([
+      async () => {
+        await iter.done;
+        count.should.eql(10);
+      },
+      async () => {
+        for (let i = 0; i < 10; i++) {
+          await delay(10);
+          count++;
+          (await iter.next()).value.should.eql(i);
+        }
+        (await iter.next()).done.should.eql(true);
+      }
+    ]);
+  });
 });

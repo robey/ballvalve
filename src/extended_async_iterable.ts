@@ -1,3 +1,5 @@
+import { AlertingAsyncIterator } from "./alerting_async_iterator";
+
 /*
  * wrapper for AsyncIterable that has basic functional operations on it.
  *
@@ -215,6 +217,10 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
         }
       }
     }());
+  }
+
+  alerting(): AlertingAsyncIterator<A> {
+    return new AlertingAsyncIterator(this.wrapped);
   }
 }
 

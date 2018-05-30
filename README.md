@@ -73,6 +73,7 @@ $ npm test
     - `takeUntil(deadline: number): ExtendedAsyncIterable<A>`
     - `dropWhile(f: (item: A) => boolean): ExtendedAsyncIterable<A>`
     - `drop(n: number): ExtendedAsyncIterable<A>`
+    - `alerting(): AlertingAsyncIterator<A>`
 
 - `PushAsyncIterator<A>(pullNext?: () => (A | undefined))`
 
@@ -99,6 +100,14 @@ $ npm test
   Wrap a nodejs `Readable` stream into an `AsyncIterator`. The iterable will place the stream into "pull" mode (paused) and emit `Buffer` objects on demand until it reaches the end of the stream, or the stream emits an error.
 
   `size` is an optional parameter to pass to the stream's `read()` method, if you want to try to read chunks of a specific size.
+
+- `AlertingAsyncIterator`
+
+  Wrap an `AsyncIterable` in an object that is still an `AsyncIterable`, but only iterates once, and has a `done` field:
+
+    - `done: Promise<void>`
+
+  This promise will resolve once the iterator has finished providing all its elements, and its `next()` method returned `done = true`.
 
 
 ## License
