@@ -2,6 +2,8 @@ import * as stream from "stream";
 import { asyncIter, ExtendedAsyncIterable } from "./extended_async_iterable";
 import { PushAsyncIterator } from "./push_async_iterator";
 
+export type Stream = AsyncIterable<Buffer>;
+
 /*
  * wrap a node.js `Readable` stream into an ES 2018 `AsyncIterable`, of the
  * kind that can be used in `for await` expressions. the iterable will
@@ -12,7 +14,7 @@ import { PushAsyncIterator } from "./push_async_iterator";
  * `size` is an optional parameter to pass to the stream's `read()` method,
  * if you want to try to read chunks of a specific size.
  */
-export class StreamAsyncIterator extends PushAsyncIterator<Buffer> {
+export class StreamAsyncIterator extends PushAsyncIterator<Buffer> implements Stream {
   constructor(public stream: stream.Readable, public size?: number) {
     super(() => {
       const buffer = this.stream.read(this.size) as Buffer;
