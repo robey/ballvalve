@@ -45,14 +45,13 @@ await iter.flatMap(intoLines()).collect()
 
 ## Building
 
-```
-$ npm install
-$ npm test
+```sh
+npm install && npm test
 ```
 
 ## API
 
-- `asyncIter<A>(iter: AsyncIterable<A> | AsyncIterator<A>): ExtendedAsyncIterable<A>)`
+- `asyncIter<A>(iter: AsyncIterable<A> | AsyncIterator<A>): ExtendedAsyncIterable<A>`
 
   Ensure that an object is iterable, by wrapping it in an object with a `[Symbol.asyncIterator]` method if necessary, and then wrap it in a fancy object with functional methods:
 
