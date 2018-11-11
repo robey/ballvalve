@@ -1,13 +1,16 @@
+let counter = 0;
+
 // an AsyncIterator that resolves a `done` promise when the iterator is complete
 export class AlertingAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> {
   done: Promise<void>;
+  id = ++counter;
 
   private wrapped: AsyncIterator<A>;
   private resolve?: () => void;
   private reject?: (e: Error) => void;
 
-  constructor(s: AsyncIterable<A>) {
-    this.wrapped = s[Symbol.asyncIterator]();
+  constructor(public stream: AsyncIterable<A>, public getDebugName: () => string) {
+    this.wrapped = stream[Symbol.asyncIterator]();
     this.done = new Promise((resolve, reject) => {
       this.resolve = resolve;
       this.reject = reject;
@@ -27,5 +30,9 @@ export class AlertingAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable
       if (this.reject) this.reject(error);
       throw error;
     }
+  }
+
+  toString(): string {
+    return `AlertingAsyncIterator[${this.id}](${this.getDebugName()})`;
   }
 }

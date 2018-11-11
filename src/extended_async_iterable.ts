@@ -1,5 +1,7 @@
 import { AlertingAsyncIterator } from "./alerting_async_iterator";
 
+let counter = 0;
+
 /*
  * wrapper for AsyncIterable that has basic functional operations on it.
  *
@@ -8,6 +10,9 @@ import { AlertingAsyncIterator } from "./alerting_async_iterator";
  * equivalent array method.
  */
 export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
+  id = ++counter;
+  getDebugName: () => string = () => this.wrapped.toString();
+
   constructor(public wrapped: AsyncIterable<A>) {
     // pass
   }
@@ -220,9 +225,14 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
   }
 
   alerting(): AlertingAsyncIterator<A> {
-    return new AlertingAsyncIterator(this.wrapped);
+    return new AlertingAsyncIterator(this.wrapped, this.getDebugName);
+  }
+
+  toString(): string {
+    return `ExtendedAsyncIterable[${this.id}](${this.getDebugName()})`;
   }
 }
+
 
 // small wrapper to allow an iterator to be iterable.
 class AsyncIterableIterator<A> implements AsyncIterable<A> {
@@ -230,22 +240,56 @@ class AsyncIterableIterator<A> implements AsyncIterable<A> {
   [Symbol.asyncIterator](): AsyncIterator<A> { return this.__iter; }
 }
 
+
 export type VaguelyIterable<A> = AsyncIterable<A> | AsyncIterator<A> | Iterable<A>;
+
 
 /*
  * Turn an `AsyncIterable` or `AsyncIterator` into an `ExtendedAsyncIterable`
  * that has functional methods on it. Will try to add as few wrappers as
  * possible, and will pass existing `ExtendedAsyncIterable`s through unharmed.
  */
-export function asyncIter<A>(iter: VaguelyIterable<A>): ExtendedAsyncIterable<A> {
-  if (iter instanceof ExtendedAsyncIterable) return iter;
+export function asyncIter<A>(iter: VaguelyIterable<A>, getDebugName?: () => string): ExtendedAsyncIterable<A> {
+  // already ExtendedAsyncIterable?
+  if (iter instanceof ExtendedAsyncIterable) {
+    if (getDebugName) iter.getDebugName = getDebugName;
+    return iter;
+  }
+
   // AsyncIterable?
-  if ((iter as any)[Symbol.asyncIterator]) return new ExtendedAsyncIterable(iter as AsyncIterable<A>);
+  if ((iter as any)[Symbol.asyncIterator]) {
+    const i = new ExtendedAsyncIterable(iter as AsyncIterable<A>);
+    if (getDebugName) i.getDebugName = getDebugName;
+    return i;
+  }
+
   // Iterable?
   if ((iter as any)[Symbol.iterator]) {
     return asyncIter(async function* () {
       for (const item of (iter as Iterable<A>)) yield item;
-    }());
+    }(), getDebugName || (() => cheapInspect(iter)));
   }
-  return new ExtendedAsyncIterable(new AsyncIterableIterator(iter as AsyncIterator<A>));
+
+  // AsyncIterator
+  const i = new ExtendedAsyncIterable(new AsyncIterableIterator(iter as AsyncIterator<A>));
+  if (getDebugName) i.getDebugName = getDebugName;
+  return i;
+}
+
+function cheapInspect(x: any): string {
+  if (x["inspect"]) return x["inspect"]();
+
+  if (x[Symbol.iterator]) {
+    // it's an Iterable
+    const iter = x as Iterable<any>;
+
+    if (Array.isArray(iter)) {
+      const a = iter as Array<any>;
+      if (a.length == 0) return "[]";
+      return "[ " + a.map(cheapInspect).join(", ") + " ]";
+    }
+    return "Iterable(...)";
+  }
+
+  return x.constructor.name + "(...)";
 }

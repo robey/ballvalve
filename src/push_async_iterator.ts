@@ -1,3 +1,5 @@
+let counter = 0;
+
 type Resolver<A> = (value: IteratorResult<A>) => void;
 type Rejecter = (error: Error) => void;
 
@@ -27,6 +29,7 @@ export class PushAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> 
   private ready = false;
   private eof = false;
   private pendingError?: Error;
+  id = ++counter;
 
   // items pushed by `push`, queued up for listeners
   private pushed: A[] = [];
@@ -105,5 +108,9 @@ export class PushAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> 
     this.resolve.shift();
     if (!reject) throw new Error("invalid state");
     reject(error);
+  }
+
+  toString(): string {
+    return `PushAsyncIterator[${this.id}](pending=${this.pushed.length}, wait=${this.resolve.length})`;
   }
 }
