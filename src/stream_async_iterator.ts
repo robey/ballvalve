@@ -25,6 +25,7 @@ export class StreamAsyncIterator extends PushAsyncIterator<Buffer> implements St
     stream.on("readable", () => this.push());
     stream.on("error", error => this.error(error));
     stream.on("end", () => this.end());
+    stream.on("close", () => this.end());
 
     // in case there's data already waiting, trigger a read() check:
     this.push();
