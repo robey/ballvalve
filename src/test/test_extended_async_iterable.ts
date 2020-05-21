@@ -215,7 +215,7 @@ describe("ExtendedAsyncIterable", () => {
           count++;
           (await iter.next()).value.should.eql(i);
         }
-        (await iter.next()).done.should.eql(true);
+        ((await iter.next()).done || false).should.eql(true);
       }
     ]);
   });

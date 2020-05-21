@@ -77,7 +77,7 @@ describe("StreamAsyncIterator", () => {
 
     const iter = StreamAsyncIterator.from(s)[Symbol.asyncIterator]();
     const result = await iter.next();
-    result.done.should.eql(false);
+    (result.done || false).should.eql(false);
     result.value.toString().should.eql("hello!");
   });
 
