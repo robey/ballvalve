@@ -1,0 +1,152 @@
+import * as stream from "stream";
+import { StreamAsyncIterator } from "./stream_async_iterator";
+import { asyncIter, VaguelyIterable } from "./extended_async_iterable";
+
+let counter = 0;
+
+/*
+ * wrap an `AsyncIterable<Buffer>` so that it can provide byte-level read
+ * operations.
+ */
+export class ByteReader implements AsyncIterator<Buffer> {
+  iter: AsyncIterator<Buffer>;
+  saved: Buffer[] = [];
+  size = 0;
+  ended = false;
+
+  id = ++counter;
+  getDebugName: () => string = () => this.iterable.toString();
+
+  constructor(private iterable: AsyncIterable<Buffer>) {
+    this.iter = iterable[Symbol.asyncIterator]();
+  }
+
+  next(): Promise<IteratorResult<Buffer>> {
+    return this.iter.next();
+  }
+
+  /*
+   * read `size` bytes, waiting for data to arrive if necessary.
+   * if the stream ends before enough data is received, it will return as
+   * much as it can. if the stream has already ended, it will return
+   * `undefined`.
+   */
+  async read(size: number): Promise<Buffer | undefined> {
+    await this.fillTo(size);
+    if (this.saved.length == 0) return undefined;
+    return this.splitOff(size);
+  }
+
+  private async fillTo(size: number): Promise<void> {
+    if (this.ended) return;
+
+    while (this.size < size) {
+      const item = await this.iter.next();
+      if (item.done) {
+        this.ended = true;
+        return;
+      }
+
+      this.saved.push(item.value);
+      this.size += item.value.length;
+    }
+  }
+
+  // this works even if size > this.size
+  private splitOff(size: number): Buffer {
+    const total = Buffer.concat(this.saved);
+    const rv = total.slice(0, size);
+    if (size >= total.length) {
+      this.saved = [];
+      this.size = 0;
+    } else {
+      this.saved = [ total.slice(size) ];
+      this.size = this.saved[0].length;
+    }
+    return rv;
+  }
+
+  private find(byte: number): number | undefined {
+    let total = 0;
+    for (let i = 0; i < this.saved.length; i++) {
+      const n = this.saved[i].indexOf(byte);
+      if (n >= 0) return total + n;
+      total += this.saved[i].length;
+    }
+    return undefined;
+  }
+
+  /*
+   * read and buffer data from this stream until a specific byte is seen.
+   * once it's seen, all buffered data up to & including the requested byte
+   * is returned. if the byte is never seen before the stream ends, it
+   * returns `undefined`.
+   */
+  async readUntil(byte: number): Promise<Buffer | undefined> {
+    const n = this.find(byte);
+    if (n !== undefined) return this.splitOff(n + 1);
+
+    while (true) {
+      const item = await this.iter.next();
+      if (item.done) {
+        this.ended = true;
+        if (this.saved.length == 0) return undefined;
+        return this.splitOff(this.size);
+      }
+
+      const oldTotal = this.size;
+      this.saved.push(item.value);
+      this.size += item.value.length;
+
+      const n = item.value.indexOf(byte);
+      if (n >= 0) return this.splitOff(oldTotal + n + 1);
+    }
+  }
+
+  /*
+   * "unshift" a buffer back onto the head of the stream.
+   */
+  unread(buffer: Buffer) {
+    this.saved.unshift(buffer);
+    this.size += buffer.length;
+  }
+
+  /*
+   * return all currently buffered data without waiting for more, and clear
+   * the buffers. if nothing is buffered, it returns `undefined`.
+   */
+  remainder(): Buffer | undefined {
+    if (this.size == 0) return undefined;
+    const rv = Buffer.concat(this.saved);
+    this.saved = [];
+    this.size = 0;
+    return rv;
+  }
+
+  toString(): string {
+    return `ExtendedReadableStream[${this.id}](buffered=${this.size}, ${this.getDebugName()})`;
+  }
+}
+
+
+export type StreamLike = stream.Readable | VaguelyIterable<Buffer>;
+
+/*
+ * Turn a nodejs `Readable` or an existing `Buffer` stream into a
+ * `ByteReader` with useful methods.
+ */
+export function byteReader(wrapped: StreamLike, getDebugName?: () => string): ByteReader {
+  if (wrapped instanceof ByteReader) return wrapped;
+
+  let readableStream: AsyncIterable<Buffer>;
+
+  if (wrapped instanceof stream.Readable) {
+    readableStream = new StreamAsyncIterator(wrapped);
+  } else {
+    readableStream = asyncIter(wrapped);
+  }
+
+  const rv = new ByteReader(readableStream);
+  if (getDebugName) rv.getDebugName = getDebugName;
+  return rv;
+}

@@ -5,4 +5,5 @@ export { AlertingAsyncIterator } from "./alerting_async_iterator";
 export { ExtendedAsyncIterable } from "./extended_async_iterable";
 export { asyncIter } from "./extended_async_iterable";
 export { PushAsyncIterator } from "./push_async_iterator";
-export { Stream, StreamAsyncIterator } from "./stream_async_iterator";
+export { ByteReader, byteReader } from "./byte_reader";
+export { StreamAsyncIterator } from "./stream_async_iterator";
