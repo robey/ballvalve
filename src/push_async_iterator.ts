@@ -26,7 +26,6 @@ type Rejecter = (error: Error) => void;
  * calls to throw an exception.
  */
 export class PushAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> {
-  private ready = false;
   private eof = false;
   private pendingError?: Error;
   id = ++counter;
@@ -44,8 +43,6 @@ export class PushAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> 
   }
 
   push(item?: A) {
-    // set `ready` so we'll check again later if there are no listeners yet:
-    this.ready = true;
     if (item !== undefined) this.pushed.push(item);
     this.wakeup();
   }
@@ -87,10 +84,7 @@ export class PushAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> 
         this.callResolve({ done: true } as IteratorResult<A>);
       } else {
         const value = this.pullNext ? this.pullNext() : undefined;
-        if (value === undefined) {
-          this.ready = false;
-          return;
-        }
+        if (value === undefined) return;
         this.callResolve({ done: false, value });
       }
     }
