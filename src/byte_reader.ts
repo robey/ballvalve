@@ -37,18 +37,23 @@ export class ByteReader implements AsyncIterator<Buffer> {
     return this.splitOff(size);
   }
 
+  // returns true if anything was added.
+  private async fill(): Promise<boolean> {
+    if (this.ended) return false;
+    const item = await this.iter.next();
+    if (item.done) {
+      this.ended = true;
+      return false;
+    }
+
+    this.saved.push(item.value);
+    this.size += item.value.length;
+    return true;
+  }
+
   private async fillTo(size: number): Promise<void> {
-    if (this.ended) return;
-
     while (this.size < size) {
-      const item = await this.iter.next();
-      if (item.done) {
-        this.ended = true;
-        return;
-      }
-
-      this.saved.push(item.value);
-      this.size += item.value.length;
+      if (!await this.fill()) return;
     }
   }
 
@@ -77,6 +82,29 @@ export class ByteReader implements AsyncIterator<Buffer> {
   }
 
   /*
+   * read and buffer data from this stream until a `test` returns an index
+   * indicating a successful match. if no match is found before the stream
+   * ends, it returns `undefined`.
+   * `test` is called with all currently buffered data, each time new data
+   * arrives. it should return -1 on an unsuccessful match. on success, it
+   * should return the index right after the end of the match (as if you were
+   * about to pass it to `slice`).
+   */
+  async readUntilMatch(test: (buffer: Buffer) => number): Promise<Buffer | undefined> {
+    while (true) {
+      const buffer = Buffer.concat(this.saved);
+      const n = test(buffer);
+      if (n >= 0) {
+        this.saved = [ buffer.slice(n) ];
+        this.size = this.saved[0].length;
+        return buffer.slice(0, n);
+      }
+
+      if (!await this.fill()) return undefined;
+    }
+  }
+
+  /*
    * read and buffer data from this stream until a specific byte is seen.
    * once it's seen, all buffered data up to & including the requested byte
    * is returned. if the byte is never seen before the stream ends, it
@@ -85,20 +113,12 @@ export class ByteReader implements AsyncIterator<Buffer> {
   async readUntil(byte: number): Promise<Buffer | undefined> {
     const n = this.find(byte);
     if (n !== undefined) return this.splitOff(n + 1);
+    if (this.ended) return undefined;
 
     while (true) {
-      const item = await this.iter.next();
-      if (item.done) {
-        this.ended = true;
-        if (this.saved.length == 0) return undefined;
-        return this.splitOff(this.size);
-      }
-
       const oldTotal = this.size;
-      this.saved.push(item.value);
-      this.size += item.value.length;
-
-      const n = item.value.indexOf(byte);
+      if (!await this.fill()) return undefined;
+      const n = this.saved[this.saved.length - 1].indexOf(byte);
       if (n >= 0) return this.splitOff(oldTotal + n + 1);
     }
   }
@@ -124,7 +144,7 @@ export class ByteReader implements AsyncIterator<Buffer> {
   }
 
   toString(): string {
-    return `ExtendedReadableStream[${this.id}](buffered=${this.size}, ${this.getDebugName()})`;
+    return `ByteReader[${this.id}](buffered=${this.size}, ${this.getDebugName()})`;
   }
 }
 

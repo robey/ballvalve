@@ -22,6 +22,14 @@ class FakeReadable extends stream.Readable {
   }
 }
 
+function findIn(haystack: Buffer, needle: Buffer): number {
+  for (let i = 0; i < haystack.length - needle.length; i++) {
+    if (Buffer.compare(haystack.slice(i, i + needle.length), needle) == 0) return i + needle.length;
+  }
+  return -1;
+}
+
+
 describe("ByteReader", () => {
   it("works on a nodejs stream", async () => {
     const s = byteReader(new FakeReadable([ "hello" ].map(s => Buffer.from(s))));
@@ -42,6 +50,16 @@ describe("ByteReader", () => {
     b2?.toString().should.eql("!");
     const b3 = await s.read(10);
     (b3 === undefined).should.eql(true);
+  });
+
+  it("readUntilMatch", async () => {
+    const s = byteReader([ "hell", "o sa", "ilor" ].map(s => Buffer.from(s)));
+    const b1 = await s.readUntilMatch((b: Buffer) => findIn(b, Buffer.from("sail")));
+    (b1 === undefined).should.eql(false);
+    b1?.toString().should.eql("hello sail");
+    const b2 = s.remainder();
+    (b2 === undefined).should.eql(false);
+    b2?.toString().should.eql("or");
   });
 
   it("readUntil", async () => {
