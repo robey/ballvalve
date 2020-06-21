@@ -1,4 +1,4 @@
-import { asyncIter, ExtendedAsyncIterable } from "../";
+import { asyncIter } from "../";
 
 import "should";
 import "source-map-support/register";
@@ -75,6 +75,25 @@ describe("ExtendedAsyncIterable", () => {
     ((await asyncIter(slowTen()).find(n => n == 4)) || 0).should.eql(4);
     ((await asyncIter(ten()).find(n => n > 14)) || 0).should.eql(0);
     ((await asyncIter(slowTen()).find(n => n > 14)) || 0).should.eql(0);
+  });
+
+  it("some", async () => {
+    (await asyncIter(ten()).some(n => n == 4)).should.eql(true);
+    (await asyncIter(slowTen()).some(n => n == 4)).should.eql(true);
+    (await asyncIter(ten()).some(n => n > 14)).should.eql(false);
+    (await asyncIter(slowTen()).some(n => n > 14)).should.eql(false);
+  });
+
+  it("every", async () => {
+    (await asyncIter(ten()).every(n => n < 9)).should.eql(false);
+    (await asyncIter(slowTen()).every(n => n < 9)).should.eql(false);
+    (await asyncIter(ten()).every(n => n < 14)).should.eql(true);
+    (await asyncIter(slowTen()).every(n => n < 14)).should.eql(true);
+  });
+
+  it("reduce", async () => {
+    (await asyncIter(ten()).reduce((sum, n) => sum + n, 0)).should.eql(45);
+    (await asyncIter(slowTen()).reduce((sum, n) => sum + n, 0)).should.eql(45);
   });
 
   it("collect", async () => {
@@ -178,6 +197,27 @@ describe("ExtendedAsyncIterable", () => {
     (await asyncIter(slowTen()).drop(4).collect()).should.eql([ 4, 5, 6, 7, 8, 9 ]);
   });
 
+  it("withPromiseAfter", async () => {
+    const [ iterable, done ] = asyncIter(ten()).withPromiseAfter();
+    const iter = iterable[Symbol.asyncIterator]();
+
+    let count = 0;
+    await Promise.all([
+      async () => {
+        await done;
+        count.should.eql(10);
+      },
+      async () => {
+        for (let i = 0; i < 10; i++) {
+          await delay(10);
+          count++;
+          (await iter.next()).value.should.eql(i);
+        }
+        ((await iter.next()).done || false).should.eql(true);
+      }
+    ]);
+  });
+
   it("string splitting demo", async () => {
     const iter = asyncIter([ "hell", "o\nsa", "ilor\neof\n" ].map(s => Buffer.from(s)));
 
@@ -199,24 +239,5 @@ describe("ExtendedAsyncIterable", () => {
     }
 
     (await iter.flatMap(intoLines()).collect()).should.eql([ "hello", "sailor", "eof" ]);
-  });
-
-  it("alerting", async () => {
-    const iter = asyncIter(ten()).alerting();
-    let count = 0;
-    await Promise.all([
-      async () => {
-        await iter.done;
-        count.should.eql(10);
-      },
-      async () => {
-        for (let i = 0; i < 10; i++) {
-          await delay(10);
-          count++;
-          (await iter.next()).value.should.eql(i);
-        }
-        ((await iter.next()).done || false).should.eql(true);
-      }
-    ]);
   });
 });

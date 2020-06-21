@@ -1,13 +1,7 @@
-import { AlertingAsyncIterator } from "./alerting_async_iterator";
-
 let counter = 0;
 
 /*
  * wrapper for AsyncIterable that has basic functional operations on it.
- *
- * some operations, like `reduce` or `all`, are not implemented, because they
- * require the iterable's entire contents. for those, use `collect()` and the
- * equivalent array method.
  */
 export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
   id = ++counter;
@@ -57,10 +51,22 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
     return undefined;
   }
 
-  async collect(): Promise<A[]> {
-    const rv: A[] = [];
-    for await (const x of this.wrapped) rv.push(x);
+  async some(f: (item: A) => boolean): Promise<boolean> {
+    return (await this.find(f)) !== undefined;
+  }
+
+  async every(f: (item: A) => boolean): Promise<boolean> {
+    return (await this.find(x => !f(x))) === undefined;
+  }
+
+  async reduce<B>(f: (sum: B, item: A) => B, start: B): Promise<B> {
+    let rv = start;
+    for await (const x of this.wrapped) rv = f(rv, x);
     return rv;
+  }
+
+  async collect(): Promise<A[]> {
+    return this.reduce((sum, x) => { sum.push(x); return sum; }, [] as A[]);
   }
 
   chain(iter: AsyncIterable<A>): ExtendedAsyncIterable<A> {
@@ -224,8 +230,20 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
     }());
   }
 
-  alerting(): AlertingAsyncIterator<A> {
-    return new AlertingAsyncIterator(this.wrapped, this.getDebugName);
+  after(f: () => Promise<void>): ExtendedAsyncIterable<A> {
+    const wrapped = this.wrapped;
+    return asyncIter(async function* () {
+      for await (const item of wrapped) yield item;
+      await f();
+    }());
+  }
+
+  withPromiseAfter(): [ ExtendedAsyncIterable<A>, Promise<void> ] {
+    let resolve: () => void = () => 0;
+    const done = new Promise<void>(r => {
+      resolve = r;
+    });
+    return [ asyncIter(this.wrapped).after(async () => resolve()), done ];
   }
 
   toString(): string {
