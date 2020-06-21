@@ -14,6 +14,9 @@ export class ByteReader implements AsyncIterator<Buffer> {
   size = 0;
   ended = false;
 
+  // track how many bytes were read
+  bytesRead = 0;
+
   id = ++counter;
   getDebugName: () => string = () => this.iterable.toString();
 
@@ -68,6 +71,7 @@ export class ByteReader implements AsyncIterator<Buffer> {
       this.saved = [ total.slice(size) ];
       this.size = this.saved[0].length;
     }
+    this.bytesRead += rv.length;
     return rv;
   }
 
@@ -97,6 +101,7 @@ export class ByteReader implements AsyncIterator<Buffer> {
       if (n >= 0) {
         this.saved = [ buffer.slice(n) ];
         this.size = this.saved[0].length;
+        this.bytesRead += n;
         return buffer.slice(0, n);
       }
 
@@ -129,6 +134,7 @@ export class ByteReader implements AsyncIterator<Buffer> {
   unread(buffer: Buffer) {
     this.saved.unshift(buffer);
     this.size += buffer.length;
+    this.bytesRead -= buffer.length;
   }
 
   /*
@@ -140,6 +146,7 @@ export class ByteReader implements AsyncIterator<Buffer> {
     const rv = Buffer.concat(this.saved);
     this.saved = [];
     this.size = 0;
+    this.bytesRead += rv.length;
     return rv;
   }
 
