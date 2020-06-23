@@ -1,5 +1,3 @@
-import * as stream from "stream";
-import { StreamAsyncIterator } from "./stream_async_iterator";
 import { asyncIter, VaguelyIterable } from "./extended_async_iterable";
 
 let counter = 0;
@@ -25,6 +23,8 @@ export class ByteReader implements AsyncIterator<Buffer> {
   }
 
   next(): Promise<IteratorResult<Buffer>> {
+    const buffer = this.remainder();
+    if (buffer) return Promise.resolve({ value: buffer });
     return this.iter.next();
   }
 
@@ -156,24 +156,12 @@ export class ByteReader implements AsyncIterator<Buffer> {
 }
 
 
-export type StreamLike = stream.Readable | VaguelyIterable<Buffer>;
-
 /*
- * Turn a nodejs `Readable` or an existing `Buffer` stream into a
- * `ByteReader` with useful methods.
+ * Turn any existing `Buffer` stream into a `ByteReader` with useful methods.
  */
-export function byteReader(wrapped: StreamLike, getDebugName?: () => string): ByteReader {
+export function byteReader(wrapped: VaguelyIterable<Buffer>, getDebugName?: () => string): ByteReader {
   if (wrapped instanceof ByteReader) return wrapped;
-
-  let readableStream: AsyncIterable<Buffer>;
-
-  if (wrapped instanceof stream.Readable) {
-    readableStream = new StreamAsyncIterator(wrapped);
-  } else {
-    readableStream = asyncIter(wrapped);
-  }
-
-  const rv = new ByteReader(readableStream);
+  const rv = new ByteReader(asyncIter(wrapped));
   if (getDebugName) rv.getDebugName = getDebugName;
   return rv;
 }

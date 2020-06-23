@@ -11,6 +11,9 @@ import { PushAsyncIterator } from "./push_async_iterator";
  *
  * `size` is an optional parameter to pass to the stream's `read()` method,
  * if you want to try to read chunks of a specific size.
+ *
+ * recent versions of node implement `AsyncIterable` on each stream
+ * automatically, so this class isn't really necessary.
  */
 export class StreamAsyncIterator extends PushAsyncIterator<Buffer> implements AsyncIterable<Buffer> {
   constructor(public stream: stream.Readable, public size?: number) {
