@@ -9,7 +9,7 @@ import * as stream from "stream";
 import { asyncIter, byteReader } from "ballvalve";
 
 // chop a stream into 4-byte chunks
-async function *into4(stream: AsyncIterable<Buffer>) {
+async function* into4(stream: AsyncIterable<Buffer>) {
   const reader = byteReader(stream);
   while (true) {
     const chunk = await reader.read(4);
@@ -34,7 +34,7 @@ const sum = await asyncIter(into4(s)).map(buffer => buffer.readUInt32LE(0)).redu
 As another example, you can transform a nodejs stream into lines of text, split at linefeeds:
 
 ```javascript
-async function *lines(stream: AsyncIterable<Buffer>) {
+async function* lines(stream: AsyncIterable<Buffer>) {
   const reader = byteReader(stream);
   while (true) {
     const line = await reader.readUntil(10);
