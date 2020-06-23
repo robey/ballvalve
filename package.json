@@ -1,6 +1,6 @@
 {
   "name": "ballvalve",
-  "version": "2.2.3",
+  "version": "3.0.0",
   "description": "adapt streaming data into async iterators",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
