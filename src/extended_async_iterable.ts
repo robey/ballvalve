@@ -3,16 +3,24 @@ let counter = 0;
 /*
  * wrapper for AsyncIterable that has basic functional operations on it.
  */
-export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
+export class ExtendedAsyncIterable<A> implements AsyncIterable<A>, AsyncIterator<A> {
   id = ++counter;
   getDebugName: () => string = () => this.wrapped.toString();
+  cachedIterator?: AsyncIterator<A>;
 
   constructor(public wrapped: AsyncIterable<A>) {
     // pass
   }
 
   [Symbol.asyncIterator](): AsyncIterator<A> {
-    return this.wrapped[Symbol.asyncIterator]();
+    // if the underlying iterable is restartable, we should be too:
+    this.cachedIterator = this.wrapped[Symbol.asyncIterator]();
+    return this;
+  }
+
+  next(): Promise<IteratorResult<A>> {
+    this.cachedIterator = this.cachedIterator ?? this.wrapped[Symbol.asyncIterator]();
+    return this.cachedIterator.next();
   }
 
   map<B>(f: (item: A) => (B | Promise<B>)): ExtendedAsyncIterable<B> {
@@ -235,7 +243,7 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
     return asyncIter(async function* () {
       for await (const item of wrapped) yield item;
       await f();
-    }());
+    }(), () => `after(${this})`);
   }
 
   withPromiseAfter(): [ ExtendedAsyncIterable<A>, Promise<void> ] {
@@ -243,7 +251,7 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
     const done = new Promise<void>(r => {
       resolve = r;
     });
-    return [ asyncIter(this.wrapped).after(async () => resolve()), done ];
+    return [ this.after(async () => resolve()), done ];
   }
 
   toString(): string {
@@ -256,6 +264,7 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A> {
 class AsyncIterableIterator<A> implements AsyncIterable<A> {
   constructor(public __iter: AsyncIterator<A>) {}
   [Symbol.asyncIterator](): AsyncIterator<A> { return this.__iter; }
+  toString(): string { return this.__iter.toString(); }
 }
 
 
