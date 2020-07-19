@@ -16,7 +16,6 @@ export class ByteReader implements AsyncIterator<Buffer> {
   bytesRead = 0;
 
   id = ++counter;
-  getDebugName: () => string = () => this.iterable.toString();
 
   constructor(private iterable: AsyncIterable<Buffer>) {
     this.iter = iterable[Symbol.asyncIterator]();
@@ -151,7 +150,7 @@ export class ByteReader implements AsyncIterator<Buffer> {
   }
 
   toString(): string {
-    return `ByteReader[${this.id}](buffered=${this.size}, ${this.getDebugName()})`;
+    return `ByteReader[${this.id}](read=${this.bytesRead}, buffered=${this.size}, ${this.iterable.toString()})`;
   }
 }
 
@@ -161,7 +160,5 @@ export class ByteReader implements AsyncIterator<Buffer> {
  */
 export function byteReader(wrapped: VaguelyIterable<Buffer>, getDebugName?: () => string): ByteReader {
   if (wrapped instanceof ByteReader) return wrapped;
-  const rv = new ByteReader(asyncIter(wrapped));
-  if (getDebugName) rv.getDebugName = getDebugName;
-  return rv;
+  return new ByteReader(asyncIter(wrapped, getDebugName));
 }
