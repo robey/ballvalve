@@ -1,4 +1,4 @@
-import { asyncIter, VaguelyIterable } from "./extended_async_iterable";
+import { asyncIter, VaguelyIterable, ExtendedAsyncIterable } from "./extended_async_iterable";
 
 let counter = 0;
 
@@ -6,7 +6,7 @@ let counter = 0;
  * wrap an `AsyncIterable<Buffer>` so that it can provide byte-level read
  * operations.
  */
-export class ByteReader implements AsyncIterator<Buffer> {
+export class ByteReader {
   iter: AsyncIterator<Buffer>;
   saved: Buffer[] = [];
   size = 0;
@@ -21,10 +21,18 @@ export class ByteReader implements AsyncIterator<Buffer> {
     this.iter = iterable[Symbol.asyncIterator]();
   }
 
-  next(): Promise<IteratorResult<Buffer>> {
+  // turn this back into an async iterator.
+  toIterable(): ExtendedAsyncIterable<Buffer> {
     const buffer = this.remainder();
-    if (buffer) return Promise.resolve({ value: buffer });
-    return this.iter.next();
+    const iter = this.iter;
+
+    // poison the byte reader. it can't work anymore.
+    delete this.iter;
+
+    return asyncIter(async function* () {
+      if (buffer) yield buffer;
+      yield * asyncIter(iter);
+    }());
   }
 
   /*
