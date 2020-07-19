@@ -42,7 +42,7 @@ export class ByteReader {
    * `undefined`.
    */
   async read(size: number): Promise<Buffer | undefined> {
-    await this.fillTo(size);
+    await this.fillTo(size + 1);
     if (this.saved.length == 0) return undefined;
     return this.splitOff(size);
   }
