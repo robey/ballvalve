@@ -11,7 +11,7 @@ async function* ten() {
 
 async function* slowTen() {
   for (let i = 0; i < 10; i++) {
-    await delay(2);
+    await delay(1);
     yield i;
   }
 }
@@ -20,6 +20,20 @@ async function* slowerTen() {
   for (let i = 0; i < 10; i++) {
     await delay(10);
     yield i;
+  }
+}
+
+async function* offsetSlowTen() {
+  await delay(5);
+  for await (const n of slowerTen()) yield n + 20;
+}
+
+async function* burstyTen() {
+  await delay(5);
+  for (let i = 0; i < 10; i++) {
+    yield i + 50;
+    if (i == 4) await delay(50);
+    if (i == 8) await delay(55);
   }
 }
 
@@ -121,6 +135,21 @@ describe("ExtendedAsyncIterable", () => {
     (await asyncIter(slowTen()).take(5).zip(asyncIter(slowTen()).drop(1).take(4)).collect()).should.eql(
       [ [ 0, 1 ], [ 1, 2 ], [ 2, 3 ], [ 3, 4 ] ]
     );
+  });
+
+  // slow, sorry.
+  it("merge", async () => {
+    (await asyncIter(slowerTen()).merge(offsetSlowTen()).collect()).should.eql(
+      [ 0, 20, 1, 21, 2, 22, 3, 23, 4, 24, 5, 25, 6, 26, 7, 27, 8, 28, 9, 29 ]
+    );
+
+    (await asyncIter(slowerTen()).merge(burstyTen()).collect()).should.eql(
+      [ 50, 51, 52, 53, 54, 0, 1, 2, 3, 4, 55, 56, 57, 58, 5, 6, 7, 8, 9, 59 ]
+    );
+
+    (await asyncIter(slowTen()).merge(slowTen(), slowTen()).collect()).should.eql(
+      [ 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9 ]
+    )
   });
 
   it("enumerate", async () => {

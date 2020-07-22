@@ -98,6 +98,29 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A>, AsyncIterator
     }());
   }
 
+  merge<B>(...iter: AsyncIterable<B>[]): ExtendedAsyncIterable<A | B> {
+    type AnnotatedResult = [ number, IteratorResult<A | B> ];
+
+    const iters = [ this.wrapped[Symbol.asyncIterator](), ...iter.map(i => i[Symbol.asyncIterator]()) ];
+    const next = async (i: number): Promise<AnnotatedResult> => [ i, await iters[i].next() ];
+    const queue: Array<Promise<AnnotatedResult> | undefined> = iters.map((_, i) => next(i));
+
+    return asyncIter(async function* () {
+      while (true) {
+        const remaining = queue.filter(p => p !== undefined) as Array<Promise<AnnotatedResult>>;
+        if (remaining.length == 0) return;
+
+        const [ i, result ] = await Promise.race(remaining);
+        if (result.done) {
+          queue[i] = undefined;
+        } else {
+          queue[i] = next(i);
+          yield result.value;
+        }
+      }
+    }());
+  }
+
   enumerate(): ExtendedAsyncIterable<[ number, A ]> {
     const wrapped = this.wrapped;
     return asyncIter(async function* () {

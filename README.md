@@ -107,6 +107,10 @@ Ensure that an object is async-iterable, by wrapping it in an object with a `[Sy
 
     Return a new async-iterable which pairs each item from this iterable with an incoming item from `iter`. Each item-pair is provided only when each of the iterators has provided its next item. When either of the iterators is exhausted, the new iterator ends too.
 
+  - `merge<B>(...iter: AsyncIterable<B>[]): ExtendedAsyncIterable<A | B>`
+
+    Return a new async-iterable which contains items from this iterable and each of `iter`, in the order that those items become available. The order of items may be unpredictable.
+
   - `enumerate(): ExtendedAsyncIterable<[ number, A ]>`
 
     Return a new async-iterable which pairs each item from this iterable with its index, starting from 0.
