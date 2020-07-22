@@ -85,4 +85,16 @@ describe("ByteReader", () => {
     const b2 = await s.read(10);
     (b2 === undefined).should.eql(true);
   });
+
+  it("can be converted back into an async iterator", async () => {
+    const s = byteReader([ "hell", "o sa", "ilor" ].map(s => Buffer.from(s)));
+    const b1 = await s.read(5);
+    (b1 === undefined).should.eql(false);
+    b1?.toString().should.eql("hello");
+
+    Buffer.concat(await s.toIterable().collect()).toString().should.eql(" sailor");
+
+    // and the byte reader should be poisoned now:
+    s.read(1).should.be.rejectedWith(/undefined/);
+  });
 });
