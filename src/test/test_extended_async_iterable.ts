@@ -1,4 +1,4 @@
-import { asyncIter } from "../";
+import { asyncIter, ExtendedAsyncIterable } from "../";
 
 import "should";
 import "source-map-support/register";
@@ -43,7 +43,20 @@ async function* doubles(n: number) {
   yield n * 2;
 }
 
+let releaseDanglingTen: (() => void) | undefined;
+async function* danglingTen() {
+  for await (const n of slowerTen()) yield n;
+  await new Promise<void>(resolve => { releaseDanglingTen = resolve; });
+}
+
+
 describe("ExtendedAsyncIterable", () => {
+  afterEach(() => {
+    if (releaseDanglingTen) releaseDanglingTen();
+    releaseDanglingTen = undefined;
+  });
+
+
   it("map", async () => {
     let rv: number[] = [];
     for await (const n of asyncIter(ten()).map(n => n * 2)) rv.push(n);
@@ -127,6 +140,18 @@ describe("ExtendedAsyncIterable", () => {
     ]);
   });
 
+  it("chainAll", async () => {
+    (await ExtendedAsyncIterable.chainAll([
+      ten(),
+      asyncIter(slowTen()).map(n => n * 2),
+      asyncIter(ten()).map(n => n + 50)
+    ]).collect()).should.eql([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+      0, 2, 4, 6, 8, 10, 12, 14, 16, 18,
+      50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+    ]);
+  });
+
   it("zip", async () => {
     (await asyncIter(ten()).take(4).zip(asyncIter(ten()).drop(1).take(5)).collect()).should.eql(
       [ [ 0, 1 ], [ 1, 2 ], [ 2, 3 ], [ 3, 4 ] ]
@@ -200,6 +225,31 @@ describe("ExtendedAsyncIterable", () => {
     const [ e, f ] = asyncIter(slowTen()).tee();
     (await e.take(3).collect()).should.eql([ 0, 1, 2 ]);
     (await f.collect()).should.eql([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+  });
+
+  it("tee with two waiters", async () => {
+    // danglingTen releases 10 digits, then hangs until the test is complete.
+    // unless each new item wakes up both "tee" listeners, one will be stuck
+    // waiting for the final digit and the test will hang too.
+    const [ a, b ] = asyncIter(danglingTen()).tee();
+    const sum = async (iter: AsyncIterable<number>): Promise<number> => {
+      let sum = 0;
+      for await (const n of asyncIter(iter).take(10)) sum += n;
+      return sum;
+    };
+
+    (await Promise.all([ sum(a), sum(b) ])).should.eql([ 45, 45 ]);
+  });
+
+  it("partition", async () => {
+    const [ a, b ] = asyncIter(danglingTen()).partition(n => n % 2 == 0);
+    const sum = async (iter: AsyncIterable<number>): Promise<number> => {
+      let sum = 0;
+      for await (const n of asyncIter(iter).take(5)) sum += n;
+      return sum;
+    };
+
+    (await Promise.all([ sum(a), sum(b) ])).should.eql([ 20, 25 ]);
   });
 
   it("takeWhile", async () => {

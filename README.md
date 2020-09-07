@@ -103,6 +103,10 @@ Ensure that an object is async-iterable, by wrapping it in an object with a `[Sy
 
     Return a new async-iterable which contains each item from this iterable first, and then each element from `iter`. `iter` is not even read until this iterator is exhausted.
 
+  - `static chainAll<A>(iters: AsyncIterable<A>[]): ExtendedAsyncIterable<A>`
+
+    Return a new async-iterable which contains items from each iterable, exhausting each one before moving to the next.
+
   - `zip<B>(iter: AsyncIterable<B>): ExtendedAsyncIterable<[ A, B ]>`
 
     Return a new async-iterable which pairs each item from this iterable with an incoming item from `iter`. Each item-pair is provided only when each of the iterators has provided its next item. When either of the iterators is exhausted, the new iterator ends too.
@@ -110,6 +114,10 @@ Ensure that an object is async-iterable, by wrapping it in an object with a `[Sy
   - `merge<B>(...iter: AsyncIterable<B>[]): ExtendedAsyncIterable<A | B>`
 
     Return a new async-iterable which contains items from this iterable and each of `iter`, in the order that those items become available. The order of items may be unpredictable.
+
+  - `static mergeAll<A>(iterables: AsyncIterable<A>[]): ExtendedAsyncIterable<A>`
+
+    Return a new async-iterable which contains items from each of `iterables`, in the order that items become available. The order of the items may be unpredictable.
 
   - `enumerate(): ExtendedAsyncIterable<[ number, A ]>`
 
@@ -126,6 +134,10 @@ Ensure that an object is async-iterable, by wrapping it in an object with a `[Sy
   - `tee(count: number = 2): ExtendedAsyncIterable<A>[]`
 
     Return `count` new iterables, each of which generates the same items, using this iterable as a source. If any of the new iterables is left un-read, it will queue items into memory as the other iterables are used, so you may want to make sure that all of the new iterables have an active reader.
+
+  - `partition(f: (item: A) => boolean): [ ExtendedAsyncIterable<A>, ExtendedAsyncIterable<A> ]`
+
+    Split this iterable in two: the first provides items where `f` returns true; the second provides items where `f` returns false. Like `tee`, if either of the returned iterables isn't actively processed, it will build up a queue of items, so make sure both iterables have an active reader.
 
   - `takeWhile(f: (item: A) => boolean): ExtendedAsyncIterable<A>`
 

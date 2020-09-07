@@ -1,3 +1,5 @@
+import { Gate } from "./gate";
+
 let counter = 0;
 
 /*
@@ -85,6 +87,14 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A>, AsyncIterator
     }());
   }
 
+  static chainAll<A>(iters: AsyncIterable<A>[]): ExtendedAsyncIterable<A> {
+    return asyncIter(async function* () {
+      for (const iter of iters) {
+        for await (const item of iter) yield item;
+      }
+    }());
+  }
+
   zip<B>(iter: AsyncIterable<B>): ExtendedAsyncIterable<[ A, B ]> {
     const iter1 = this.wrapped[Symbol.asyncIterator]();
     const iter2 = iter[Symbol.asyncIterator]();
@@ -98,23 +108,25 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A>, AsyncIterator
     }());
   }
 
-  merge<B>(...iter: AsyncIterable<B>[]): ExtendedAsyncIterable<A | B> {
-    type AnnotatedResult = [ number, IteratorResult<A | B> ];
+  merge<B>(...iterables: AsyncIterable<B>[]): ExtendedAsyncIterable<A | B> {
+    return ExtendedAsyncIterable.mergeAll<A | B>([ this, ...iterables ]);
+  }
 
-    const iters = [ this.wrapped[Symbol.asyncIterator](), ...iter.map(i => i[Symbol.asyncIterator]()) ];
-    const next = async (i: number): Promise<AnnotatedResult> => [ i, await iters[i].next() ];
-    const queue: Array<Promise<AnnotatedResult> | undefined> = iters.map((_, i) => next(i));
+  static mergeAll<A>(iterables: AsyncIterable<A>[]): ExtendedAsyncIterable<A> {
+    type Result = IteratorResult<A>;
+    type Iter = AsyncIterator<A>;
+
+    const iters = iterables.map(iter => iter[Symbol.asyncIterator]());
+    const next = async (iter: Iter): Promise<[ Iter, Result ]> => [ iter, await iter.next() ];
+    const queue = new Map<Iter, Promise<[ Iter, Result ]>>(iters.map(iter => [ iter, next(iter) ]));
 
     return asyncIter(async function* () {
-      while (true) {
-        const remaining = queue.filter(p => p !== undefined) as Array<Promise<AnnotatedResult>>;
-        if (remaining.length == 0) return;
-
-        const [ i, result ] = await Promise.race(remaining);
+      while (queue.size > 0) {
+        const [ iter, result ] = await Promise.race(queue.values());
         if (result.done) {
-          queue[i] = undefined;
+          queue.delete(iter);
         } else {
-          queue[i] = next(i);
+          queue.set(iter, next(iter));
           yield result.value;
         }
       }
@@ -172,23 +184,29 @@ export class ExtendedAsyncIterable<A> implements AsyncIterable<A>, AsyncIterator
 
   tee(count: number = 2): ExtendedAsyncIterable<A>[] {
     const iter = this.wrapped[Symbol.asyncIterator]();
-    const queued: IteratorResult<A>[][] = new Array(count);
-
-    return [...Array(count).keys()].map(i => {
-      queued[i] = [];
-      return asyncIter(async function* () {
-        while (true) {
-          let result = queued[i].shift();
-          if (result === undefined) {
-            let r = await iter.next();
-            queued.forEach(q => q.push(r));
-            continue;
-          }
-          if (result.done) return;
-          yield result.value;
-        }
-      }());
+    const queues: IteratorResult<A>[][] = [...Array(count).keys()].map(i => []);
+    const gate = new Gate(async () => {
+      const r = await iter.next();
+      for (const q of queues) q.push(r);
     });
+
+    return queues.map(q => asyncIterFromQ(q, () => gate.wait()));
+  }
+
+  partition(f: (item: A) => boolean): [ ExtendedAsyncIterable<A>, ExtendedAsyncIterable<A> ] {
+    const iter = this.wrapped[Symbol.asyncIterator]();
+    const queues: [ IteratorResult<A>[], IteratorResult<A>[] ] = [ [], [] ];
+    const gate = new Gate(async () => {
+      const r = await iter.next();
+      if (r.done) {
+        queues[0].push(r);
+        queues[1].push(r);
+      } else {
+        queues[f(r.value) ? 0 : 1].push(r);
+      }
+    });
+
+    return [ asyncIterFromQ(queues[0], () => gate.wait()), asyncIterFromQ(queues[1], () => gate.wait()) ];
   }
 
   takeWhile(f: (item: A) => boolean): ExtendedAsyncIterable<A> {
@@ -342,4 +360,20 @@ function cheapInspect(x: any): string {
   }
 
   return x.constructor.name + "(...)";
+}
+
+// factored out from tee & partition: given a queue of saved-up items, and
+// a function that waits for more to be available, generate an asyncIter.
+function asyncIterFromQ<A>(q: IteratorResult<A>[], next: () => Promise<void>): ExtendedAsyncIterable<A> {
+  return asyncIter(async function* () {
+    while (true) {
+      let result = q.shift();
+      if (result === undefined) {
+        await next();
+      } else {
+        if (result.done) return;
+        yield result.value;
+      }
+    }
+  }());
 }
