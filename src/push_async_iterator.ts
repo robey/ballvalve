@@ -71,19 +71,17 @@ export class PushAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> 
 
   private wakeup() {
     while (this.resolve.length > 0) {
-      // in order: throw any pending error, hand out any queued data, signal
-      // completion if `end()` was called, or try to pull a new item.
+      // in order: hand out any old queued data, throw any pending error,
+      // signal completion if `end()` was called, or try to pull a new item.
       if (this.pushed.length > 0) {
         const value = this.pushed.shift();
         if (value) this.callResolve({ done: false, value });
       } else if (this.pendingError) {
         this.callReject(this.pendingError);
       } else if (this.eof) {
-        // the iterator protocol says we don't need to define `value` when
-        // `done` is true, but typescript doesn't know that yet.
-        this.callResolve({ done: true } as IteratorResult<A>);
+        this.callResolve({ done: true, value: undefined });
       } else {
-        const value = this.pullNext ? this.pullNext() : undefined;
+        const value = this.pullNext?.();
         if (value === undefined) return;
         this.callResolve({ done: false, value });
       }
