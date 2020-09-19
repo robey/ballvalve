@@ -27,7 +27,7 @@ export class ByteReader {
     const iter = this.iter;
 
     // poison the byte reader. it can't work anymore.
-    delete this.iter;
+    delete (this as any).iter;
 
     return asyncIter(async function* () {
       if (buffer) yield buffer;
@@ -42,7 +42,7 @@ export class ByteReader {
    * `undefined`.
    */
   async read(size: number): Promise<Buffer | undefined> {
-    await this.fillTo(size + 1);
+    await this.fillTo(size);
     if (this.saved.length == 0) return undefined;
     return this.splitOff(size);
   }
