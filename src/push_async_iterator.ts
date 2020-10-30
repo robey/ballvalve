@@ -75,7 +75,7 @@ export class PushAsyncIterator<A> implements AsyncIterator<A>, AsyncIterable<A> 
       // signal completion if `end()` was called, or try to pull a new item.
       if (this.pushed.length > 0) {
         const value = this.pushed.shift();
-        if (value) this.callResolve({ done: false, value });
+        if (value !== undefined) this.callResolve({ done: false, value });
       } else if (this.pendingError) {
         this.callReject(this.pendingError);
       } else if (this.eof) {
