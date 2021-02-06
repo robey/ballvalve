@@ -27,11 +27,11 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@types/mocha": "^2.2.48",
-    "@types/node": "^12.12.38",
-    "@types/source-map-support": "^0.5.2",
-    "mocha": "^8.0.1",
+    "@types/node": "^12.19.16",
+    "@types/source-map-support": "^0.5.3",
+    "mocha": "^8.2.1",
     "should": "^13.2.3",
-    "source-map-support": "^0.5.4",
+    "source-map-support": "^0.5.19",
     "typescript": "^3.9.7"
   },
   "files": [
